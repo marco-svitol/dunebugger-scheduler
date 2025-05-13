@@ -1,2 +1,2 @@
-# dunbugger-scheduler
+# dunebugger-scheduler
 scheduler component for dunebugger
