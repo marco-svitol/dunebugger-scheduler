@@ -1,0 +1,5 @@
+schedule
+dotenv
+load_dotenv
+nats-py
+jsonschema==4.19.0
