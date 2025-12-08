@@ -11,9 +11,21 @@ async def main():
             await asyncio.sleep(1)
         await schedule_interpreter.request_lists()
         
-        # toDo: implement the schedulrer service that executes actions based on schedules
-        while True:
-            await asyncio.sleep(1)
+        # Wait a bit for lists to be received
+        await asyncio.sleep(2)
+        
+        # Initialize schedule after validation
+        schedule_interpreter.validate_schedule_file(schedule_interpreter.schedule_config)
+        schedule_interpreter.load_schedule(schedule_interpreter.schedule_config)
+
+        # Start the scheduler service
+        scheduler_task = asyncio.create_task(schedule_interpreter.run_scheduler())
+        
+        # Keep the main loop running
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            logger.info("Scheduler task was cancelled")
 
 
     except Exception as e:
@@ -21,12 +33,20 @@ async def main():
 
     finally:
         # Clean up resources when exiting
-        print("Cleaning up resources...")
+        logger.info("Cleaning up resources...")
+        
+        # Cancel scheduler task if it's still running
+        if 'scheduler_task' in locals() and not scheduler_task.done():
+            scheduler_task.cancel()
+            try:
+                await scheduler_task
+            except asyncio.CancelledError:
+                logger.info("Scheduler task cancelled successfully")
         
         # Close NATS connection
         await mqueue.close_listener()
  
-        print("Cleanup completed.")
+        logger.info("Cleanup completed.")
 
 if __name__ == "__main__":
     asyncio.run(main())
