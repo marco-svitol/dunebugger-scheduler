@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
 import asyncio
-from class_factory import mqueue, scheduler_service
+from class_factory import mqueue, schedule_interpreter
 from dunebugger_logging import logger
 
 async def main():
-    """Main entry point for the scheduler service"""
     try:
-        await mqueue.start()
+        await mqueue.start_listener()
+        # wait that NATS is connected before continuing
+        while not mqueue.is_connected:
+            await asyncio.sleep(1)
+        await schedule_interpreter.request_lists()
+        
+        # toDo: implement the schedulrer service that executes actions based on schedules
+        while True:
+            await asyncio.sleep(1)
 
-        # Initialize and run the scheduler service
-        await scheduler_service.initialize()
-        return await scheduler_service.run_scheduler()
-    except FileNotFoundError as e:
-        logger.error(f"Configuration file not found: {str(e)}")
-        return 1
-    except ValueError as e:
-        logger.error(f"Configuration error: {str(e)}")
-        return 1
+
     except Exception as e:
-        logger.error(f"Unexpected error in scheduler: {str(e)}")
-        return 1
+        logger.error(f"An error occurred in main: {e}")
+
+    finally:
+        # Clean up resources when exiting
+        print("Cleaning up resources...")
+        
+        # Close NATS connection
+        await mqueue.close_listener()
+ 
+        print("Cleanup completed.")
 
 if __name__ == "__main__":
-    exit_code = asyncio.run(main())
+    asyncio.run(main())

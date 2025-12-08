@@ -2,17 +2,6 @@ from dunebugger_logging import logger
 import os
 import subprocess
 
-def ArduinoSend(command):
-    global Arduino
-    ccommand = command.replace("\n", "")
-    if Arduino is not False:
-        Arduino.write(bytes(command, "UTF-8"))
-        logger.debug("Sending command " + ccommand + " to Arduino")
-    else:
-        ccommand = command.replace("\n", "")
-        logger.warning("ignoring command " + ccommand + " to Arduino")
-
-
 def is_raspberry_pi():
     try:
         with open("/proc/device-tree/model") as model_file:
