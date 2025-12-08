@@ -7,7 +7,7 @@ class ScheduleInterpreter:
         self.states = []
         self.schedule_config = path.join(path.dirname(path.abspath(__file__)), "config/schedule.conf")
         #self.read_schedule(self.schedule_config)
-        self.parse_schedule(self.schedule_config)
+        self.validate_schedule_file(self.schedule_config)
         self.schedule = {}
 
     async def request_lists(self):
@@ -62,4 +62,18 @@ class ScheduleInterpreter:
         # Validate the new schedule data before applying it
         # If validate then save the new schedule to the configuration file
         # and reload the schedule by cleaning all schedule and loading it again
+        pass
+
+    async def execute_scheduled_action(self, action):
+        """Execute the scheduled action."""
+        # Execute the given action, which can be a command or a state
+        # If it's a state, retrieve the list of commands associated with that state and execute them
+        # If it's a command, execute it directly
+        # Commmands must be sent with the mqueue dispatcher to the core
+        # When a state contains multiple commands, execute them sequentially with a small delay between each command
+        pass
+
+    async def run_scheduler(self):
+        """Run the scheduler to execute actions based on the schedule."""
+        #This must be a non-blocking coroutine that runs in the main loop
         pass
