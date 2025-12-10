@@ -1,3 +1,6 @@
+ARG APP_UID=1000
+ARG APP_GID=1000
+
 # Use Python 3.11 slim image as base (Debian Bookworm)
 FROM python:3.11-slim-bookworm
 
@@ -24,8 +27,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY app/ ./app/
 
-# Create a non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -g ${APP_GID} appuser \
+ && useradd  -u ${APP_UID} -g ${APP_GID} -r -m appuser
+
 RUN chown -R appuser:appuser /app
 USER appuser
 
