@@ -1,0 +1,95 @@
+[domenica]
+8:10 acceso
+9:00 acceso_silenzioso
+12:30 spento
+14:00 acceso
+17:00 acceso_silenzioso
+18:30 acceso    
+20:00 spento
+
+[lunedì]
+1:49 acceso
+8:00 acceso_silenzioso
+12:30 spento
+15:03 acceso
+17:00 acceso_silenzioso
+18:30 acceso
+19:30 spento
+
+[martedì]
+7:00 acceso
+8:00 acceso_silenzioso
+12:30 spento
+14:55 acceso
+17:00 acceso_silenzioso
+18:30 acceso
+19:30 spento
+
+[mercoledì]
+7:00 acceso
+8:00 acceso_silenzioso
+12:30 spento
+14:55 acceso
+17:00 acceso_silenzioso
+18:30 acceso
+19:30 spento
+
+[giovedì]
+7:00 acceso
+8:00 acceso_silenzioso
+12:30 spento
+14:55 acceso
+17:00 acceso_silenzioso
+18:30 acceso
+19:30 spento
+
+[venerdì]
+7:00 acceso
+8:00 acceso_silenzioso
+12:30 spento
+14:55 acceso
+17:00 acceso_silenzioso
+18:30 acceso
+19:30 spento
+
+[sabato]
+8:00 acceso
+9:00 acceso_silenzioso
+12:30 spento
+14:00 acceso
+17:00 acceso_silenzioso
+18:30 acceso
+20:00 spento
+
+# Fine della configurazione del programma settimanale
+# Giorni speciali possono essere aggiunti qui sotto
+[24-12-2025]
+7:00 acceso
+8:00 acceso_silenzioso
+9:00 acceso
+11:10 acceso_silenzioso
+11:45 acceso
+12:30 spento
+14:55 acceso
+18:00 acceso_silenzioso
+19:00 acceso
+21:30 acceso_silenzioso
+22:30 acceso
+23:30 spento
+
+[25-12-2025]
+8:00 acceso
+22:00 spento
+
+[31-12-2025]
+7:00 acceso
+8:00 acceso_silenzioso
+9:00 acceso
+00:00 spento
+
+[09-12-2025]
+03:01 spentox
+12:10 acceso
+19:43 spento
+23:00 acceso_silenzioso
+
