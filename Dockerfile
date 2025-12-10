@@ -6,20 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-# Install system dependencies and build tools
-# RUN apt-get update && \
-#     apt-get install -y --no-install-recommends \
-#         gcc \
-#         python3-dev \
-#         build-essential \
-#         iproute2 \
-#         wireless-tools \
-#         net-tools \
-#         iputils-ping \
-#         procps \
-#     && rm -rf /var/lib/apt/lists/* \
-#     && apt-get clean
-
 # Set working directory
 WORKDIR /app
 
