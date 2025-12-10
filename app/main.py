@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
-from class_factory import mqueue, schedule_interpreter
+from class_factory import mqueue, schedule_interpreter, state_tracker
 from dunebugger_logging import logger
 
 async def main():
@@ -14,9 +14,11 @@ async def main():
         # Wait a bit for lists to be received
         await asyncio.sleep(2)
         
+        # Start the state monitoring task
+        await state_tracker.start_state_monitoring()
+
         # Initialize schedule after validation
-        schedule_interpreter.validate_schedule_file(schedule_interpreter.schedule_config)
-        schedule_interpreter.load_schedule(schedule_interpreter.schedule_config)
+        await schedule_interpreter.init_schedule()
 
         # Start the scheduler service
         scheduler_task = asyncio.create_task(schedule_interpreter.run_scheduler())

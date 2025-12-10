@@ -1,4 +1,5 @@
 from dunebugger_settings import settings
+from state_tracker import state_tracker
 from mqueue import NATSComm
 from mqueue_handler import MessagingQueueHandler
 from schedule_interpreter import ScheduleInterpreter
@@ -11,6 +12,7 @@ mqueue = NATSComm(
     subject_root=settings.mQueueSubjectRoot,
     mqueue_handler=mqueue_handler,
 )
-schedule_interpreter = ScheduleInterpreter(mqueue_handler)
+schedule_interpreter = ScheduleInterpreter(mqueue_handler, state_tracker)
 mqueue_handler.schedule_interpreter = schedule_interpreter
 mqueue_handler.mqueue_sender = mqueue
+state_tracker.mqueue_handler = mqueue_handler

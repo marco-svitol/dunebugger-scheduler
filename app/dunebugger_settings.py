@@ -45,7 +45,7 @@ class DunebuggerSettings:
             if section == "General":
                 pass
             elif section == "MessageQueue":
-                if option in ["mQueueServers", "mQueueClientID", "mQueueSubjectRoot"]:
+                if option in ["mQueueServers", "mQueueClientID", "mQueueSubjectRoot", "mQueueStateCheckIntervalSecs"]:
                     return str(value)
             elif section == "Log":
                 logLevel = get_logging_level_from_name(value)
