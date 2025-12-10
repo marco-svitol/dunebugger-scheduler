@@ -1,8 +1,8 @@
-ARG APP_UID=1000
-ARG APP_GID=1000
-
 # Use Python 3.11 slim image as base (Debian Bookworm)
 FROM python:3.11-slim-bookworm
+
+ARG APP_UID=1000
+ARG APP_GID=1000
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
