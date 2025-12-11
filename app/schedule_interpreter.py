@@ -87,8 +87,9 @@ class ScheduleInterpreter:
         backup_file = None
         
         try:
-            # Create a temporary file with random name
-            temp_fd, temp_file = tempfile.mkstemp(suffix='.conf', prefix='schedule_temp_')
+            # Create a temporary file with random name in the config folder
+            config_dir = path.dirname(self.schedule_config)
+            temp_fd, temp_file = tempfile.mkstemp(suffix='.conf', prefix='schedule_temp_', dir=config_dir)
             
             # Write new schedule data to temporary file
             with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
