@@ -9,7 +9,6 @@ async def main():
         # wait that NATS is connected before continuing
         while not mqueue.is_connected:
             await asyncio.sleep(1)
-        await schedule_interpreter.request_lists()
         
         # Wait a bit for lists to be received
         await asyncio.sleep(2)

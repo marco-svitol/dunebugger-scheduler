@@ -40,6 +40,7 @@ class ScheduleInterpreter:
     async def init_schedule(self):
         while True:
             try:
+                await self.request_lists()
                 self._validate_schedule_file(self.schedule_config)
                 break
             except Exception as e:
