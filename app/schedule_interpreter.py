@@ -41,6 +41,7 @@ class ScheduleInterpreter:
         while True:
             try:
                 await self.request_lists()
+                await asyncio.sleep(3)  # Wait for lists to be received
                 self._validate_schedule_file(self.schedule_config)
                 break
             except Exception as e:
@@ -63,9 +64,13 @@ class ScheduleInterpreter:
             if next_action:
                 execution_time = datetime.combine(now.date(), next_action['time'])
                 if execution_time <= now:
-                    execution_time += timedelta(days=1)
+                    # All special date actions have passed, look for next day's first action
+                    return self._get_next_day_first_action(now)
                 wait_seconds = (execution_time - now).total_seconds()
                 return next_action['action'], wait_seconds, execution_time
+            else:
+                # No more actions today for special date, look for next day's first action
+                return self._get_next_day_first_action(now)
         
         # Check current weekday schedule
         if current_weekday in self.schedule['weekdays']:
@@ -192,6 +197,14 @@ class ScheduleInterpreter:
         section_name = section_name.replace('/', '-')
         date_pattern = r'^\d{1,2}-\d{1,2}-\d{4}$'
         return bool(re.match(date_pattern, section_name))
+    
+    def _normalize_date_format(self, date_str):
+        """Normalize date string to DD-MM-YYYY format with 2-digit day and month."""
+        # Replace '/' with '-' for uniformity
+        date_str = date_str.replace('/', '-')
+        # Parse the date and reformat to ensure 2-digit day and month
+        date_obj = datetime.strptime(date_str, '%d-%m-%Y')
+        return date_obj.strftime('%d-%m-%Y')
     
     def _validate_date_format(self, date_str):
         """Validate date format DD-MM-YYYY or DD/MM/YYYY."""
@@ -514,7 +527,9 @@ class ScheduleInterpreter:
         
         if self._is_special_date(section_name):
             self._validate_date_format(section_name)
-            schedule['special_dates'][section_name] = schedule_items
+            # Normalize date to DD-MM-YYYY format to ensure matching
+            normalized_date = self._normalize_date_format(section_name)
+            schedule['special_dates'][normalized_date] = schedule_items
         else:
             # Map Italian weekday names to Python weekday numbers
             weekday_map = {
@@ -525,7 +540,8 @@ class ScheduleInterpreter:
             if weekday_num is not None:
                 schedule['weekdays'][weekday_num] = schedule_items
             else:
-                logger.warning(f"Unknown section name '{section_name}', skipping storage")
+                raise ValueError(f"Unknown section name '{section_name}' in schedule")
+                #logger.warning(f"Unknown section name '{section_name}', skipping storage")
 
     def _load_schedule(self, file_path, schedule):
         """Parse the schedule file to handle duplicates and edge cases."""
