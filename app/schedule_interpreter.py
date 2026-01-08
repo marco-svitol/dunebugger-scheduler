@@ -10,8 +10,7 @@ class ScheduleInterpreter:
     def __init__(self, mqueue_handler, state_tracker):
         self.mqueue_handler = mqueue_handler
         self.state_tracker = state_tracker
-        self.commands = []
-        self.states = []
+        self.modes = []
         self.schedule_config = path.join(path.dirname(path.abspath(__file__)), "config/schedule.conf")
         self.schedule = {'weekdays': {}, 'special_dates': {}}
         self.next_action = None
@@ -23,19 +22,23 @@ class ScheduleInterpreter:
         self._schedule_changed = asyncio.Event()
 
     async def request_lists(self):
-        """Request the commands ans states list from the dunebugger core."""
-        await self.mqueue_handler.dispatch_message("get_commands_list", "schedule_command", "core")
-        await self.mqueue_handler.dispatch_message("get_states_list", "schedule_command", "core")
-        logger.info("Requested commands and states lists from core")
+        """Request the modes list from the dunebugger core."""
+        await self.mqueue_handler.dispatch_message("get_modes_list", "schedule_command", "core")
+        logger.info("Requested modes list from core")
         
-    async def store_list(self, list_body, list_type):
-        """Store the received commands list."""
-        if list_type == "commands":
-            self.commands = list_body
-            logger.info(f"Stored commands list with {len(list_body)} items")
-        elif list_type == "states":
-            self.states = list_body
-            logger.info(f"Stored states list with {len(list_body)} items")
+    async def store_modes_list(self, modes_list_body):
+        """Store the received modes list from new JSON format."""
+        # New format: {"modes": [{"name": "...", ...}, ...]}
+        # Convert to dict indexed by name for easy lookup
+        if isinstance(modes_list_body, dict) and 'modes' in modes_list_body:
+            modes_array = modes_list_body['modes']
+            self.modes = {mode['name']: mode for mode in modes_array}
+            logger.info(f"Stored modes list with {len(self.modes)} items")
+        else:
+            # Fallback for old format or direct array
+            logger.warning("Unexpected modes format, attempting to process as-is")
+            self.modes = modes_list_body
+            logger.info(f"Stored modes list")
 
     async def init_schedule(self):
         while True:
@@ -282,49 +285,33 @@ class ScheduleInterpreter:
         logger.warning("No schedule found in the next 7 days")
         return None
     
-    async def _execute_command(self, command):
-        """Execute a single command via message queue."""
-        try:
-            logger.info(f"Executing command: {command}")
-            await self.mqueue_handler.dispatch_message(command, "dunebugger_set", "core")
-        except Exception as e:
-            logger.error(f"Failed to execute command '{command}': {e}")
-            raise
+    # async def _execute_command(self, command):
+    #     """Execute a single command via message queue."""
+    #     try:
+    #         logger.info(f"Executing command: {command}")
+    #         await self.mqueue_handler.dispatch_message(command, "dunebugger_set", "core")
+    #     except Exception as e:
+    #         logger.error(f"Failed to execute command '{command}': {e}")
+    #         raise
     
-    async def _execute_scheduled_action(self, state_name):
-        """Execute a state by retrieving and executing its associated commands."""
+    async def _execute_scheduled_action(self, mode_name):
+        """Execute a mode by sending a single message to core."""
         try:
-            logger.info(f"Executing state: {state_name}")
+            logger.info(f"Executing mode: {mode_name}")
             
-            # Execute commands associated with the state
-            commands = self.states[state_name]['commands']
-
-            if not commands:
-                logger.warning(f"State '{state_name}' has no associated commands")
-                # Still track execution even if no commands
-                self.last_executed_action = state_name
-                self.last_executed_time = datetime.now()
-                return
-            
-            for i, command in enumerate(commands):
-                logger.info(f"Executing state command {i+1}/{len(commands)}: {command}")
-                await self._execute_command(command)
-                
-                # Small delay between commands to avoid overwhelming the system
-                if i < len(commands) - 1:  # Don't delay after the last command
-                    await asyncio.sleep(1.5)
+            # Send single message to core to execute the mode
+            # Core will handle all commands internally
+            message_body = f"mode execute {mode_name}"
+            await self.mqueue_handler.dispatch_message(message_body, "dunebugger_set", "core")
             
             # Track the successful execution
-            self.last_executed_action = state_name
+            self.last_executed_action = mode_name
             self.last_executed_time = datetime.now()
 
-            # Notify state tracker about schedule update
-            self.state_tracker.notify_update("near_actions")
-
-            logger.info(f"Successfully executed state '{state_name}' at {self.last_executed_time}")
+            logger.info(f"Successfully dispatched mode '{mode_name}' at {self.last_executed_time}")
                     
         except Exception as e:
-            logger.error(f"Failed to execute state '{state_name}': {e}")
+            logger.error(f"Failed to execute mode '{mode_name}': {e}")
             raise
     
     def get_scheduler_status(self):
@@ -333,8 +320,7 @@ class ScheduleInterpreter:
             'schedule_loaded': bool(self.schedule),
             'weekdays_configured': len(self.schedule.get('weekdays', {})),
             'special_dates_configured': len(self.schedule.get('special_dates', {})),
-            'commands_available': len(self.commands),
-            'states_available': len(self.states),
+            'modes_available': len(self.modes) if self.modes else 0,
             'next_action': self.next_action,
             'next_action_time': self.next_action_time.isoformat() if self.next_action_time else None
         }
@@ -379,7 +365,7 @@ class ScheduleInterpreter:
             return ""
 
     def get_next_actions(self):
-        """Get the next three actions with date, time, action, commands and state description."""
+        """Get the next three actions with date, time, action, commands and mode description."""
         next_actions = []
         now = datetime.now()
         
@@ -410,16 +396,16 @@ class ScheduleInterpreter:
                         
                     action_datetime = datetime.combine(search_date.date(), item['time'])
                     
-                    # Get state information
-                    state_info = self._get_state_info(item['action'])
+                    # Get mode information
+                    mode_info = self._get_mode_info(item['action'])
                     
                     action_data = {
                         'date': current_date_str,
                         'time': item['time'].strftime('%H:%M'),
                         'datetime': action_datetime.isoformat(),
                         'action': item['action'],
-                        'commands': state_info.get('commands', []),
-                        'description': state_info.get('description', '')
+                        'commands': mode_info.get('commands', []),
+                        'description': mode_info.get('description', '')
                     }
                     
                     next_actions.append(action_data)
@@ -439,8 +425,8 @@ class ScheduleInterpreter:
                 'message': 'No actions have been executed yet'
             }
         
-        # Get state information
-        state_info = self._get_state_info(self.last_executed_action)
+        # Get mode information
+        mode_info = self._get_mode_info(self.last_executed_action)
         
         return {
             'executed': True,
@@ -448,8 +434,8 @@ class ScheduleInterpreter:
             'time': self.last_executed_time.strftime('%H:%M'),
             'datetime': self.last_executed_time.isoformat(),
             'action': self.last_executed_action,
-            'commands': state_info.get('commands', []),
-            'description': state_info.get('description', '')
+            'commands': mode_info.get('commands', []),
+            'description': mode_info.get('description', '')
         }
     
     def get_validation_report(self):
@@ -460,9 +446,8 @@ class ScheduleInterpreter:
             'unknown_actions': []  # Actions that can't be validated due to missing lists
         }
         
-        # Check if we have commands and states lists
-        has_commands = bool(self.commands)
-        has_states = bool(self.states)
+        # Check if we have modes list
+        has_modes = bool(self.modes)
         
         # Collect all actions from schedule
         all_actions = set()
@@ -479,45 +464,27 @@ class ScheduleInterpreter:
         
         # Validate each unique action
         for action in all_actions:
-            # It's a state
-            if not has_states:
+            # It's a mode
+            if not has_modes:
                 validation_report['unknown_actions'].append({
                     'action': action,
-                    'reason': 'States list not loaded'
+                    'reason': 'modes list not loaded'
                 })
-            elif self._is_state_valid(action):
+            elif self._is_mode_valid(action):
                 validation_report['valid_actions'].append(action)
             else:
                 validation_report['invalid_actions'].append({
                     'action': action,
-                    'reason': f'State "{action}" not found in states list'
+                    'reason': f'mode "{action}" not found in modes list'
                 })
         
         return validation_report
     
-    def _is_command_valid(self, command):
-        """Check if a command exists in the commands list."""
-        for cmd in self.commands:
-            if isinstance(cmd, dict):
-                if cmd.get('name') == command or cmd.get('command') == command:
-                    return True
-            elif isinstance(cmd, str) and cmd == command:
-                return True
-        return False
-    
-    def _is_state_valid(self, state_name):
-        """Check if a state exists in the states list."""
-        if isinstance(self.states, dict):
-            # States is a dictionary with state names as keys
-            return state_name in self.states
-        else:
-            # States is a list of state objects
-            for state in self.states:
-                if isinstance(state, dict):
-                    if state.get('name') == state_name:
-                        return True
-                elif isinstance(state, str) and state == state_name:
-                    return True
+    def _is_mode_valid(self, mode_name):
+        """Check if a mode exists in the modes list."""
+        if isinstance(self.modes, dict):
+            # modes is a dictionary with mode_name as keys
+            return mode_name in self.modes
         return False
     
     def _store_schedule_section(self, section_name, schedule_items, schedule):
@@ -646,59 +613,37 @@ class ScheduleInterpreter:
             raise ValueError(f"Validation failed: {e}")
     
     def _validate_action(self, action, section_name, time_str):
-        """Validate action against commands or states lists."""
-        # Only validate if we have the states list loaded
-        if self.states:
-            # Check if state exists in states list
-            state_found = False
-            for state in self.states:
-                if isinstance(state, dict):
-                    if state.get('name') == action:
-                        state_found = True
-                        break
-                elif isinstance(state, str) and state == action:
-                    state_found = True
-                    break
-            
-            if not state_found:
-                raise ValueError(f"State '{action}' not found in states list for time slot {time_str} in section {section_name}")
+        """Validate action against modes list."""
+        # Only validate if we have the modes list loaded
+        if self.modes:
+            if not self._is_mode_valid(action):
+                raise ValueError(f"Mode '{action}' not found in modes list for time slot {time_str} in section {section_name}")
         else:
-            raise ValueError(f"States list not loaded, cannot validate state '{action}' at time {time_str} in section {section_name}")
-            #logger.debug(f"States list not loaded, skipping validation for state '{action}'")
+            raise ValueError(f"modes list not loaded, cannot validate mode '{action}' at time {time_str} in section {section_name}")
 
-    def _get_state_info(self, state_name):
-        """Get detailed information about a state including commands and description."""
-        if not self.states:
+    def _get_mode_info(self, mode_name):
+        """Get detailed information about a mode including commands and description."""
+        if not self.modes:
             return {
                 'commands': [],
-                'description': f'State information not available (states list not loaded)'
+                'description': f'Mode information not available (modes list not loaded)'
             }
         
-        # Check if states is a dictionary (expected format)
-        if isinstance(self.states, dict):
-            if state_name in self.states:
-                state_data = self.states[state_name]
+        # Check if modes is a dictionary (expected format after conversion)
+        if isinstance(self.modes, dict):
+            if mode_name in self.modes:
+                mode_data = self.modes[mode_name]
+                # New format uses 'desc' field and commands is a dict
+                commands_dict = mode_data.get('commands', {})
+                # Convert commands dict to list of values for display
+                commands_list = list(commands_dict.values()) if isinstance(commands_dict, dict) else []
                 return {
-                    'commands': state_data.get('commands', []),
-                    'description': state_data.get('description', f'State: {state_name}')
+                    'commands': commands_list,
+                    'description': mode_data.get('desc', mode_data.get('description', f'Mode: {mode_name}'))
                 }
-        else:
-            # Handle if states is a list (alternative format)
-            for state in self.states:
-                if isinstance(state, dict):
-                    if state.get('name') == state_name:
-                        return {
-                            'commands': state.get('commands', []),
-                            'description': state.get('description', f'State: {state_name}')
-                        }
-                elif isinstance(state, str) and state == state_name:
-                    return {
-                        'commands': [],
-                        'description': f'State: {state_name}'
-                    }
         
-        # State not found
+        # Mode not found
         return {
             'commands': [],
-            'description': f'Unknown state: {state_name}'
+            'description': f'Unknown mode: {mode_name}'
         }

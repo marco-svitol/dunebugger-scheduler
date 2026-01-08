@@ -31,10 +31,8 @@ class MessagingQueueHandler:
                 await self.handle_refresh()
             elif subject in ["heartbeat"]:
                 await self.handle_heartbeat()
-            elif subject in ["commands_list"]:
-                await self.handle_commands_list(message_json)
-            elif subject in ["states_list"]:
-                await self.handle_states_list(message_json)
+            elif subject in ["modes_list"]:
+                await self.handle_modes_list(message_json)
             elif subject in ["update_schedule"]:
                 return await self.handle_update_schedule(message_json)
             elif subject in ["get_schedule"]:
@@ -66,13 +64,9 @@ class MessagingQueueHandler:
     async def handle_heartbeat(self):
         await self.dispatch_message("alive", "heartbeat", "remote")
 
-    async def handle_commands_list(self, message_json):
-        commands = message_json["body"]
-        return await self.schedule_interpreter.store_list(commands, "commands")
-
-    async def handle_states_list(self, message_json):
-        states = message_json["body"]
-        return await self.schedule_interpreter.store_list(states, "states") 
+    async def handle_modes_list(self, message_json):
+        modes_list = message_json["body"]
+        return await self.schedule_interpreter.store_modes_list(modes_list) 
 
     async def handle_update_schedule(self, message_json):
         schedule_data = message_json["body"]
