@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
-from class_factory import mqueue, schedule_interpreter, state_tracker
+from class_factory import mqueue, mqueue_handler, schedule_interpreter, state_tracker
 from dunebugger_logging import logger
 
 async def main():
@@ -9,6 +9,9 @@ async def main():
         # wait that NATS is connected before continuing
         while not mqueue.is_connected:
             await asyncio.sleep(1)
+        
+        # Request NTP status from controller to initialize state
+        await mqueue_handler.request_ntp_status()
         
         # Wait a bit for lists to be received
         await asyncio.sleep(2)

@@ -8,6 +8,7 @@ class MessagingQueueHandler:
     def __init__(self):
         self.mqueue_sender = None
         self.schedule_interpreter = None
+        self.ntp_status_manager = None
 
     async def process_mqueue_message(self, mqueue_message):
         """Callback method to process received messages."""
@@ -41,6 +42,8 @@ class MessagingQueueHandler:
                 await self.handle_get_next_actions()
             elif subject in ["get_last_executed_action"]:
                 await self.handle_get_last_executed_action()
+            elif subject in ["ntp_status"]:
+                await self.handle_ntp_status(message_json)
             else:
                 logger.warning(f"Unknown subject: {subject}. Ignoring message.")
         except KeyError as key_error:
@@ -86,4 +89,23 @@ class MessagingQueueHandler:
     async def handle_get_last_executed_action(self):
         last_action = self.schedule_interpreter.get_last_executed_action()
         await self.dispatch_message(last_action, "last_executed_action", "remote")
+
+    async def request_ntp_status(self):
+        """Request the current NTP status from the controller."""
+        await self.dispatch_message("get_ntp_status", "get_ntp_status", "remote")
+        logger.info("Requested NTP status from controller")
+
+    async def handle_ntp_status(self, message_json):
+        """Handle NTP status updates from the controller."""
+        body = message_json.get("body", {})
+        ntp_available = body.get("ntp_available", False)
+        timestamp = body.get("timestamp", "unknown")
+        
+        logger.info(f"Received NTP status: available={ntp_available}, timestamp={timestamp}")
+        
+        # Update the NTP status in NTP status manager
+        if self.ntp_status_manager:
+            self.ntp_status_manager.set_ntp_status(ntp_available)
+        else:
+            logger.error("NTP status manager not available to update NTP status")
     

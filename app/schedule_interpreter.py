@@ -7,9 +7,10 @@ import re
 from dunebugger_logging import logger
 
 class ScheduleInterpreter:
-    def __init__(self, mqueue_handler, state_tracker):
+    def __init__(self, mqueue_handler, state_tracker, ntp_status_manager):
         self.mqueue_handler = mqueue_handler
         self.state_tracker = state_tracker
+        self.ntp_status_manager = ntp_status_manager
         self.modes = []
         self.schedule_config = path.join(path.dirname(path.abspath(__file__)), "config/schedule.conf")
         self.schedule = {'weekdays': {}, 'special_dates': {}}
@@ -299,6 +300,14 @@ class ScheduleInterpreter:
         try:
             logger.info(f"Executing mode: {mode_name}")
             
+            # Check if NTP is available before sending command to core
+            if not self.ntp_status_manager.is_ntp_available():
+                logger.warning(f"NTP is unavailable - skipping execution of mode '{mode_name}'")
+                # Track the action but mark it as skipped
+                self.last_executed_action = f"{mode_name} (skipped - NTP unavailable)"
+                self.last_executed_time = datetime.now()
+                return
+            
             # Send single message to core to execute the mode
             # Core will handle all commands internally
             message_body = f"mode execute {mode_name}"
@@ -313,18 +322,6 @@ class ScheduleInterpreter:
         except Exception as e:
             logger.error(f"Failed to execute mode '{mode_name}': {e}")
             raise
-    
-    def get_scheduler_status(self):
-        """Get current scheduler status for monitoring."""
-        status = {
-            'schedule_loaded': bool(self.schedule),
-            'weekdays_configured': len(self.schedule.get('weekdays', {})),
-            'special_dates_configured': len(self.schedule.get('special_dates', {})),
-            'modes_available': len(self.modes) if self.modes else 0,
-            'next_action': self.next_action,
-            'next_action_time': self.next_action_time.isoformat() if self.next_action_time else None
-        }
-        return status
     
     def get_today_schedule(self):
         """Get today's complete schedule for debugging and monitoring."""
