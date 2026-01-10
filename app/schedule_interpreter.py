@@ -300,25 +300,25 @@ class ScheduleInterpreter:
         try:
             logger.info(f"Executing mode: {mode_name}")
             
-            # Check if NTP is available before sending command to core
+            # Check if NTP is available to decide if sending command to core
             if not self.ntp_status_manager.is_ntp_available():
                 logger.warning(f"NTP is unavailable - skipping execution of mode '{mode_name}'")
                 # Track the action but mark it as skipped
-                self.last_executed_action = f"{mode_name} (skipped - NTP unavailable)"
-                self.last_executed_time = datetime.now()
-                return
-            
-            # Send single message to core to execute the mode
-            # Core will handle all commands internally
-            message_body = f"mode execute {mode_name}"
-            await self.mqueue_handler.dispatch_message(message_body, "dunebugger_set", "core")
-            
-            # Track the successful execution
-            self.last_executed_action = mode_name
-            self.last_executed_time = datetime.now()
+                last_executed_action_notes = f" (skipped due to time sync unavailable)"
+            else:
+                # Send single message to core to execute the mode
+                # Core will handle all commands internally
+                message_body = f"mode execute {mode_name}"
+                await self.mqueue_handler.dispatch_message(message_body, "dunebugger_set", "core")
+                logger.info(f"Successfully dispatched mode '{mode_name}' at {self.last_executed_time}")
+                
 
-            logger.info(f"Successfully dispatched mode '{mode_name}' at {self.last_executed_time}")
-                    
+            # Track the successful execution
+            self.last_executed_action = {"mode": mode_name, "notes": last_executed_action_notes if 'last_executed_action_notes' in locals() else ""}
+            self.last_executed_time = datetime.now()
+            # Notify state tracker about near actions update
+            self.state_tracker.notify_update("near_actions")
+
         except Exception as e:
             logger.error(f"Failed to execute mode '{mode_name}': {e}")
             raise
@@ -416,21 +416,21 @@ class ScheduleInterpreter:
 
     def get_last_executed_action(self):
         """Get the last executed action with all details."""
-        if not self.last_executed_action or not self.last_executed_time:
+        if not self.last_executed_time:
             return {
                 'executed': False,
                 'message': 'No actions have been executed yet'
             }
         
         # Get mode information
-        mode_info = self._get_mode_info(self.last_executed_action)
+        mode_info = self._get_mode_info(self.last_executed_action["mode"])
         
         return {
             'executed': True,
             'date': self.last_executed_time.strftime('%d-%m-%Y'),
             'time': self.last_executed_time.strftime('%H:%M'),
             'datetime': self.last_executed_time.isoformat(),
-            'action': self.last_executed_action,
+            'action': self.last_executed_action["mode"] + self.last_executed_action["notes"],
             'commands': mode_info.get('commands', []),
             'description': mode_info.get('description', '')
         }

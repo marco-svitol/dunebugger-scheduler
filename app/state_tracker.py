@@ -54,21 +54,51 @@ class StateTracker:
         """
         Monitor the state tracker for changes and react accordingly.
         """
+        from dunebugger_logging import logger
+        
         while self.running:
-            if self.has_changes():
-                changed_states = self.get_changes()
-                for state in changed_states:
-                    if state == "schedule":
-                        # React to GPIO state changes
-                        await self.mqueue_handler.handle_get_schedule()
-                        await self.mqueue_handler.handle_get_next_actions()
-                        await self.mqueue_handler.handle_get_last_executed_action()
-                    elif state == "near_actions":
-                        # Handle sequence changes
-                        await self.mqueue_handler.handle_get_next_actions()
-                        await self.mqueue_handler.handle_get_last_executed_action()
-                # Reset the state tracker after handling changes
-                self.reset_changes()
+            try:
+                if self.has_changes():
+                    changed_states = self.get_changes()
+                    for state in changed_states:
+                        try:
+                            if state == "schedule":
+                                logger.debug("StateTracker detected schedule change.")
+                                # React to GPIO state changes with timeout protection
+                                await asyncio.wait_for(
+                                    self.mqueue_handler.handle_get_schedule(), 
+                                    timeout=5.0
+                                )
+                                await asyncio.wait_for(
+                                    self.mqueue_handler.handle_get_next_actions(), 
+                                    timeout=5.0
+                                )
+                                await asyncio.wait_for(
+                                    self.mqueue_handler.handle_get_last_executed_action(), 
+                                    timeout=5.0
+                                )
+                            elif state == "near_actions":
+                                logger.debug("StateTracker detected near actions change.")
+                                # Handle sequence changes with timeout protection
+                                await asyncio.wait_for(
+                                    self.mqueue_handler.handle_get_next_actions(), 
+                                    timeout=5.0
+                                )
+                                await asyncio.wait_for(
+                                    self.mqueue_handler.handle_get_last_executed_action(), 
+                                    timeout=5.0
+                                )
+                        except asyncio.TimeoutError:
+                            logger.error(f"Timeout while handling state change: {state}")
+                        except Exception as e:
+                            logger.error(f"Error handling state change '{state}': {e}", exc_info=True)
+                    
+                    # Reset the state tracker after handling changes
+                    self.reset_changes()
+                    
+            except Exception as e:
+                logger.error(f"Unexpected error in state monitor loop: {e}", exc_info=True)
+                
             await asyncio.sleep(self.check_interval)
 
 state_tracker = StateTracker()
