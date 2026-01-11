@@ -7,9 +7,10 @@ import re
 from dunebugger_logging import logger
 
 class ScheduleInterpreter:
-    def __init__(self, mqueue_handler, state_tracker):
+    def __init__(self, mqueue_handler, state_tracker, ntp_status_manager):
         self.mqueue_handler = mqueue_handler
         self.state_tracker = state_tracker
+        self.ntp_status_manager = ntp_status_manager
         self.modes = []
         self.schedule_config = path.join(path.dirname(path.abspath(__file__)), "config/schedule.conf")
         self.schedule = {'weekdays': {}, 'special_dates': {}}
@@ -299,32 +300,28 @@ class ScheduleInterpreter:
         try:
             logger.info(f"Executing mode: {mode_name}")
             
-            # Send single message to core to execute the mode
-            # Core will handle all commands internally
-            message_body = f"mode execute {mode_name}"
-            await self.mqueue_handler.dispatch_message(message_body, "dunebugger_set", "core")
-            
-            # Track the successful execution
-            self.last_executed_action = mode_name
-            self.last_executed_time = datetime.now()
+            # Check if NTP is available to decide if sending command to core
+            if not self.ntp_status_manager.is_ntp_available():
+                logger.warning(f"NTP is unavailable - skipping execution of mode '{mode_name}'")
+                # Track the action but mark it as skipped
+                last_executed_action_notes = f" (skipped due to time sync unavailable)"
+            else:
+                # Send single message to core to execute the mode
+                # Core will handle all commands internally
+                message_body = f"mode execute {mode_name}"
+                await self.mqueue_handler.dispatch_message(message_body, "dunebugger_set", "core")
+                logger.info(f"Successfully dispatched mode '{mode_name}' at {self.last_executed_time}")
+                
 
-            logger.info(f"Successfully dispatched mode '{mode_name}' at {self.last_executed_time}")
-                    
+            # Track the successful execution
+            self.last_executed_action = {"mode": mode_name, "notes": last_executed_action_notes if 'last_executed_action_notes' in locals() else ""}
+            self.last_executed_time = datetime.now()
+            # Notify state tracker about near actions update
+            self.state_tracker.notify_update("near_actions")
+
         except Exception as e:
             logger.error(f"Failed to execute mode '{mode_name}': {e}")
             raise
-    
-    def get_scheduler_status(self):
-        """Get current scheduler status for monitoring."""
-        status = {
-            'schedule_loaded': bool(self.schedule),
-            'weekdays_configured': len(self.schedule.get('weekdays', {})),
-            'special_dates_configured': len(self.schedule.get('special_dates', {})),
-            'modes_available': len(self.modes) if self.modes else 0,
-            'next_action': self.next_action,
-            'next_action_time': self.next_action_time.isoformat() if self.next_action_time else None
-        }
-        return status
     
     def get_today_schedule(self):
         """Get today's complete schedule for debugging and monitoring."""
@@ -419,21 +416,21 @@ class ScheduleInterpreter:
 
     def get_last_executed_action(self):
         """Get the last executed action with all details."""
-        if not self.last_executed_action or not self.last_executed_time:
+        if not self.last_executed_time:
             return {
                 'executed': False,
                 'message': 'No actions have been executed yet'
             }
         
         # Get mode information
-        mode_info = self._get_mode_info(self.last_executed_action)
+        mode_info = self._get_mode_info(self.last_executed_action["mode"])
         
         return {
             'executed': True,
             'date': self.last_executed_time.strftime('%d-%m-%Y'),
             'time': self.last_executed_time.strftime('%H:%M'),
             'datetime': self.last_executed_time.isoformat(),
-            'action': self.last_executed_action,
+            'action': self.last_executed_action["mode"] + self.last_executed_action["notes"],
             'commands': mode_info.get('commands', []),
             'description': mode_info.get('description', '')
         }

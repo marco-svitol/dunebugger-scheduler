@@ -35,7 +35,7 @@
 19:30 spento
 
 [giovedì]
-7:00 acceso
+7:40 acceso
 8:00 acceso_silenzioso
 12:30 spento
 14:55 acceso
@@ -63,7 +63,7 @@
 
 # Fine della configurazione del programma settimanale
 # Giorni speciali possono essere aggiunti qui sotto
-[7-1-2026]
+[10-1-2026]
 8:00 acceso
-19:50 spento
+13:22 spento
 19:51 acceso_silenzioso
