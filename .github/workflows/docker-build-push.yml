@@ -1,16 +1,6 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-    tags:
-      - 'v*'
-  pull_request:
-    branches:
-      - main
-      - develop
   workflow_run:
     workflows: ["Semantic Release"]
     types:
@@ -18,6 +8,7 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
 
 env:
   REGISTRY: docker.io
@@ -26,8 +17,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # Only run if it's not a workflow_run or if the workflow_run was successful
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
       packages: write
@@ -36,6 +26,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
+        ref: ${{ github.event.workflow_run.head_sha || github.sha }}
         fetch-depth: 0
 
     - name: Get version information
@@ -43,22 +34,21 @@ jobs:
       run: |
         # Check if VERSION file exists (created by semantic-release)
         if [ -f VERSION ]; then
-          VERSION=$(cat VERSION)
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "Found VERSION file with: ${VERSION}"
         else
           VERSION="0.1.0"
+          echo "VERSION file not found, using default: ${VERSION}"
         fi
         
         # Get short commit SHA
         COMMIT_SHA=$(git rev-parse --short HEAD)
         
-        # Determine build type
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+        # Determine build type based on branch
+        if [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "main" ]]; then
           BUILD_TYPE="prod"
-        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+        elif [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "develop" ]]; then
           BUILD_TYPE="dev"
-        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-          BUILD_TYPE="release"
-          VERSION=${GITHUB_REF#refs/tags/v}
         else
           BUILD_TYPE="branch"
         fi
@@ -72,7 +62,6 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Docker Hub
-      if: github.event_name != 'pull_request'
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
@@ -85,22 +74,17 @@ jobs:
         TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
         VERSION="${{ steps.version.outputs.version }}"
         COMMIT="${{ steps.version.outputs.commit }}"
+        BRANCH="${{ github.event.workflow_run.head_branch || github.ref_name }}"
         
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+        if [[ "${BRANCH}" == "main" ]]; then
           # Main branch: latest and version tags
           TAGS="${TAGS}:latest,${TAGS}:${VERSION},${TAGS}:${VERSION}-${COMMIT}"
-        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-          # Develop branch: develop tag and version-beta tags
+        elif [[ "${BRANCH}" == "develop" ]]; then
+          # Develop branch: develop tag and version tags
           TAGS="${TAGS}:develop,${TAGS}:${VERSION},${TAGS}:${VERSION}-${COMMIT}"
-        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-          # Tag: version tags
-          TAGS="${TAGS}:${VERSION},${TAGS}:${VERSION}-${COMMIT}"
-        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          # Pull request: pr tag
-          TAGS="${TAGS}:pr-${{ github.event.pull_request.number }}"
         else
           # Other branches: branch name tag
-          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/[^a-zA-Z0-9]/-/g')
+          BRANCH_NAME=$(echo "${BRANCH}" | sed 's/[^a-zA-Z0-9]/-/g')
           TAGS="${TAGS}:${BRANCH_NAME}"
         fi
         
@@ -113,7 +97,7 @@ jobs:
         context: .
         file: ./Dockerfile
         platforms: linux/amd64,linux/arm64
-        push: ${{ github.event_name != 'pull_request' }}
+        push: true
         tags: ${{ steps.docker_tags.outputs.tags }}
         build-args: |
           APP_VERSION=${{ steps.version.outputs.version }}
@@ -122,10 +106,15 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    - name: Image digest
-      if: github.event_name != 'pull_request'
+    - name: Build summary
       run: |
-        echo "Successfully built and pushed:"
-        echo "Tags: ${{ steps.docker_tags.outputs.tags }}"
-        echo "Version: ${{ steps.version.outputs.version }}"
-        echo "Commit: ${{ steps.version.outputs.commit }}"
+        echo "### Docker Build Complete :rocket:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Build Type:** ${{ steps.version.outputs.build_type }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** ${{ steps.version.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "${{ steps.docker_tags.outputs.tags }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
