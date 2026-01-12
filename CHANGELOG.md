@@ -1,3 +1,10 @@
+## [1.0.0-beta.5](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-01-12)
+
+
+### Bug Fixes
+
+* add actions write permission to trigger docker build ([7014495](https://github.com/marco-svitol/dunebugger-scheduler/commit/70144950014609f1343d04b9f682f2018fa5693c))
+
 ## [1.0.0-beta.4](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-01-12)
 
 
