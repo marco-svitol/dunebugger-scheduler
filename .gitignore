@@ -190,3 +190,7 @@ package-lock.json
 package.json
 .releaserc.json
 CHANGELOG.md
+VERSION
+
+# Generated version file (created at Docker build time)
+app/_version_info.py
