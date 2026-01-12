@@ -183,3 +183,10 @@ secrets/
 
 # Docker secrets
 docker-secrets/
+
+# Semantic release artifacts
+node_modules/
+package-lock.json
+package.json
+.releaserc.json
+CHANGELOG.md

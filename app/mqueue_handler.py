@@ -1,6 +1,7 @@
 import json
 from dunebugger_logging import logger
 from dunebugger_settings import settings
+from version import get_version_info
 
 class MessagingQueueHandler:
     """Class to handle messaging queue operations."""
@@ -44,6 +45,8 @@ class MessagingQueueHandler:
                 await self.handle_get_last_executed_action()
             elif subject in ["ntp_status"]:
                 await self.handle_ntp_status(message_json)
+            elif subject in ["get_version"]:
+                await self.handle_get_version()
             else:
                 logger.warning(f"Unknown subject: {subject}. Ignoring message.")
         except KeyError as key_error:
@@ -108,4 +111,10 @@ class MessagingQueueHandler:
             self.ntp_status_manager.set_ntp_status(ntp_available)
         else:
             logger.error("NTP status manager not available to update NTP status")
+
+    async def handle_get_version(self):
+        """Handle get_version requests by returning version information."""
+        version_info = get_version_info()
+        await self.dispatch_message(version_info, "version_info", "remote")
+        logger.info(f"Sent version info: {version_info['full_version']}")
     
