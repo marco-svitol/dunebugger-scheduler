@@ -1,3 +1,10 @@
+## [1.0.0-beta.3](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-01-12)
+
+
+### Bug Fixes
+
+* remove skip ci from semantic release ([c237da7](https://github.com/marco-svitol/dunebugger-scheduler/commit/c237da7c26d50d7766136baa2b408b9715151089))
+
 ## [1.0.0-beta.2](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2026-01-12)
 
 
