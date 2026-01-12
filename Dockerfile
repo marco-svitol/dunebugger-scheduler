@@ -16,28 +16,23 @@ RUN apt-get update && \
     VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-unknown") && \
     COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
     echo "Extracted version: ${VERSION}, commit: ${COMMIT}" && \
-    # Parse version info
     echo "${VERSION}" | grep -qE '^v?[0-9]+\.[0-9]+\.[0-9]+-beta\.' && IS_BETA=true || IS_BETA=false && \
     if [ "${IS_BETA}" = "true" ]; then \
-        BASE_VERSION=$(echo "${VERSION}" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+)-.*/\1/') && \
-        PRERELEASE=$(echo "${VERSION}" | sed -E 's/^v?[0-9]+\.[0-9]+\.[0-9]+-([^-]+).*/\1/') && \
+        BASE_VERSION=$(echo "${VERSION}" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+)-.*/\1/'); \
+        PRERELEASE=$(echo "${VERSION}" | sed -E 's/^v?[0-9]+\.[0-9]+\.[0-9]+-([^-]+).*/\1/'); \
         BUILD="${PRERELEASE}"; \
     else \
-        BASE_VERSION=$(echo "${VERSION}" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/') && \
+        BASE_VERSION=$(echo "${VERSION}" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/'); \
         BUILD="release"; \
     fi && \
-    # Check for dirty flag
     echo "${VERSION}" | grep -q dirty && BUILD="${BUILD}.dirty" || true && \
-    # Generate Python version file
     mkdir -p /build/app && \
-    cat > /build/app/_version_info.py << EOF
-# Auto-generated version file - DO NOT EDIT
-# Generated at build time from git tags
-__version__ = "${BASE_VERSION}"
-__build__ = "${BUILD}"
-__commit__ = "${COMMIT}"
-EOF
-    && cat /build/app/_version_info.py && \
+    echo "# Auto-generated version file - DO NOT EDIT" > /build/app/_version_info.py && \
+    echo "# Generated at build time from git tags" >> /build/app/_version_info.py && \
+    echo "__version__ = \"${BASE_VERSION}\"" >> /build/app/_version_info.py && \
+    echo "__build__ = \"${BUILD}\"" >> /build/app/_version_info.py && \
+    echo "__commit__ = \"${COMMIT}\"" >> /build/app/_version_info.py && \
+    cat /build/app/_version_info.py && \
     apt-get remove -y git && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* && \
