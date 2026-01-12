@@ -87,15 +87,9 @@ jobs:
                 }
               ],
               [
-                "@semantic-release/exec",
-                {
-                  "prepareCmd": "echo ${nextRelease.version} > VERSION"
-                }
-              ],
-              [
                 "@semantic-release/git",
                 {
-                  "assets": ["CHANGELOG.md", "VERSION"],
+                  "assets": ["CHANGELOG.md"],
                   "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
                 }
               ],
@@ -112,8 +106,10 @@ jobs:
       - name: Output release info
         id: release_info
         run: |
-          if [ -f VERSION ]; then
-            VERSION=$(cat VERSION | tr -d '[:space:]')
+          # Check if a new tag was created
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LATEST_TAG" ]; then
+            VERSION=${LATEST_TAG#v}  # Remove 'v' prefix if present
             echo "Released version: ${VERSION}"
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
             echo "released=true" >> $GITHUB_OUTPUT

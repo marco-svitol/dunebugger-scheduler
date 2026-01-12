@@ -1,19 +1,58 @@
 # Use Python 3.11 slim image as base (Debian Bookworm)
+FROM python:3.11-slim-bookworm AS builder
+
+ARG APP_UID=1000
+ARG APP_GID=1000
+
+# Set working directory for build stage
+WORKDIR /build
+
+# Copy only what's needed to extract version
+COPY .git/ ./.git/
+
+# Extract version information from git and generate version file
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-unknown") && \
+    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
+    echo "Extracted version: ${VERSION}, commit: ${COMMIT}" && \
+    # Parse version info
+    echo "${VERSION}" | grep -qE '^v?[0-9]+\.[0-9]+\.[0-9]+-beta\.' && IS_BETA=true || IS_BETA=false && \
+    if [ "${IS_BETA}" = "true" ]; then \
+        BASE_VERSION=$(echo "${VERSION}" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+)-.*/\1/') && \
+        PRERELEASE=$(echo "${VERSION}" | sed -E 's/^v?[0-9]+\.[0-9]+\.[0-9]+-([^-]+).*/\1/') && \
+        BUILD="${PRERELEASE}"; \
+    else \
+        BASE_VERSION=$(echo "${VERSION}" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/') && \
+        BUILD="release"; \
+    fi && \
+    # Check for dirty flag
+    echo "${VERSION}" | grep -q dirty && BUILD="${BUILD}.dirty" || true && \
+    # Generate Python version file
+    mkdir -p /build/app && \
+    cat > /build/app/_version_info.py << EOF
+# Auto-generated version file - DO NOT EDIT
+# Generated at build time from git tags
+__version__ = "${BASE_VERSION}"
+__build__ = "${BUILD}"
+__commit__ = "${COMMIT}"
+EOF
+    && cat /build/app/_version_info.py && \
+    apt-get remove -y git && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
+
+# Final stage - minimal runtime image
 FROM python:3.11-slim-bookworm
 
 ARG APP_UID=1000
 ARG APP_GID=1000
-ARG APP_VERSION=0.1.0
-ARG APP_BUILD=dev
-ARG APP_COMMIT=unknown
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app \
-    APP_VERSION=${APP_VERSION} \
-    APP_BUILD=${APP_BUILD} \
-    APP_COMMIT=${APP_COMMIT}
+    PYTHONPATH=/app
 
 # Set working directory
 WORKDIR /app
@@ -21,14 +60,16 @@ WORKDIR /app
 # Copy requirements file
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies and git (needed for version.py to read git tags)
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     apt-get update && \
-    #apt-get remove -y gcc python3-dev build-essential && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
+
+# Copy generated version file from builder stage
+COPY --from=builder /build/app/_version_info.py ./app/_version_info.py
 
 # Copy application code
 COPY app/ ./app/

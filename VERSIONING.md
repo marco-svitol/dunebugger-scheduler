@@ -27,30 +27,47 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format:
 
 #### Commit Types and Version Impact
 
-| Type | Description | Version Bump |
-|------|-------------|--------------|
-| `feat` | New feature | MINOR |
-| `fix` | Bug fix | PATCH |
-| `perf` | Performance improvement | PATCH |
-| `docs` | Documentation changes | PATCH |
-| `style` | Code style changes | PATCH |
-| `refactor` | Code refactoring | PATCH |
-| `test` | Test additions/changes | PATCH |
-| `build` | Build system changes | PATCH |
-| `ci` | CI/CD changes | PATCH |
-| `chore` | Other changes | No release |
-| `BREAKING CHANGE` | Breaking changes (in footer) | MAJOR |
+The version bump behavior differs between **stable** and **prerelease** branches:
+
+##### On Stable Branches (`main`)
+
+| Type | Description | Version Bump | Example |
+|------|-------------|--------------|---------|
+| `feat` | New feature | MINOR | `1.0.0` → `1.1.0` |
+| `fix` | Bug fix | PATCH | `1.0.0` → `1.0.1` |
+| `perf` | Performance improvement | PATCH | `1.0.0` → `1.0.1` |
+| `docs` | Documentation changes | PATCH | `1.0.0` → `1.0.1` |
+| `style` | Code style changes | PATCH | `1.0.0` → `1.0.1` |
+| `refactor` | Code refactoring | PATCH | `1.0.0` → `1.0.1` |
+| `test` | Test additions/changes | PATCH | `1.0.0` → `1.0.1` |
+| `build` | Build system changes | PATCH | `1.0.0` → `1.0.1` |
+| `ci` | CI/CD changes | PATCH | `1.0.0` → `1.0.1` |
+| `chore` | Other changes | No release | - |
+| `feat!` or `BREAKING CHANGE` | Breaking changes | MAJOR | `1.0.0` → `2.0.0` |
+
+##### On Prerelease Branches (`develop`)
+
+| Type | Description | Version Bump | Example |
+|------|-------------|--------------|---------|
+| `feat` | New feature | PRERELEASE | `1.0.0-beta.4` → `1.0.0-beta.5` |
+| `fix` | Bug fix | PRERELEASE | `1.0.0-beta.4` → `1.0.0-beta.5` |
+| `perf` | Performance improvement | PRERELEASE | `1.0.0-beta.4` → `1.0.0-beta.5` |
+| Any other type | Any change triggering release | PRERELEASE | `1.0.0-beta.4` → `1.0.0-beta.5` |
+| `chore` | Other changes | No release | - |
+
+> **Note**: On prerelease branches, all commit types that trigger a release will increment the **prerelease number** (e.g., `beta.5` → `beta.6`) rather than the semantic version components (major/minor/patch). The accumulated changes will determine the proper version bump when merged to `main`.
 
 #### Examples
 
+**On `main` branch (stable releases):**
 ```bash
-# Minor version bump (new feature)
+# Minor version bump: 1.0.0 → 1.1.0
 feat: add NTP status monitoring
 
-# Patch version bump (bug fix)
+# Patch version bump: 1.0.0 → 1.0.1
 fix: correct schedule parsing error
 
-# Major version bump (breaking change)
+# Major version bump: 1.0.0 → 2.0.0
 feat!: redesign message queue API
 
 BREAKING CHANGE: The mqueue message format has changed.
@@ -59,6 +76,23 @@ All clients must update to the new format.
 # No version bump
 chore: update dependencies
 ```
+
+**On `develop` branch (prerelease):**
+```bash
+# Prerelease bump: 1.0.0-beta.4 → 1.0.0-beta.5
+feat: add NTP status monitoring
+
+# Prerelease bump: 1.0.0-beta.5 → 1.0.0-beta.6
+fix: correct schedule parsing error
+
+# Prerelease bump: 1.0.0-beta.6 → 1.0.0-beta.7
+feat!: redesign message queue API
+
+# No version bump
+chore: update dependencies
+```
+
+> **Important**: When `develop` is merged to `main`, all accumulated `feat`, `fix`, and breaking changes since the last stable release will determine the final version. For example, if `develop` has 3 `feat:` commits since `1.0.0`, merging to `main` will create `1.3.0`.
 
 ## Workflows
 
@@ -74,23 +108,22 @@ chore: update dependencies
 1. Analyzes commit messages since last release
 2. Determines next version number
 3. Generates CHANGELOG.md
-4. Creates VERSION file
-5. Creates Git tag (e.g., `v1.2.3`)
-6. Creates GitHub release with release notes
+4. Creates Git tag (e.g., `v1.2.3` or `v1.2.3-beta.5`)
+5. Creates GitHub release with release notes
 
 **Branch Behavior**:
 - **main**: Creates stable releases (e.g., `v1.2.3`)
 - **develop**: Creates pre-releases (e.g., `v1.2.3-beta.1`)
+
+**Note**: No VERSION file is created anymore. Git tags are the single source of truth.
 
 ### 2. Docker Build & Push Workflow
 
 **File**: `.github/workflows/docker-build-push.yml`
 
 **Triggers**:
-- Push to `main` or `develop` branches
-- Git tags starting with `v*`
-- Pull requests to `main` or `develop`
 - After successful semantic release
+- Manual workflow dispatch
 
 **Docker Image Tags**:
 
@@ -98,16 +131,41 @@ chore: update dependencies
 |--------------|--------------|---------|
 | **main** | `latest`, `<version>`, `<version>-<commit>` | `latest`, `1.2.3`, `1.2.3-abc1234` |
 | **develop** | `develop`, `<version>`, `<version>-<commit>` | `develop`, `1.2.3-beta.1`, `1.2.3-beta.1-abc1234` |
-| **tags** | `<version>`, `<version>-<commit>` | `1.2.3`, `1.2.3-abc1234` |
-| **PRs** | `pr-<number>` | `pr-42` |
 
-**Build Arguments**:
-The workflow injects version information into the Docker image:
-- `APP_VERSION`: Semantic version (e.g., `1.2.3`)
-- `APP_BUILD`: Build type (`prod`, `dev`, `release`, `branch`)
-- `APP_COMMIT`: Short commit SHA (e.g., `abc1234`)
+**Build Process**:
+1. Checks out repository with full git history (`fetch-depth: 0`)
+2. Extracts version from git tags during Docker build
+3. Generates `_version_info.py` file in builder stage
+4. Copies generated file to final image
+5. No git or .git directory in final image (secure & minimal)
 
 ## Version Information in Application
+
+### Version Storage and Retrieval
+
+The application uses **git tags as the single source of truth** for version information. The version is handled differently in different environments:
+
+#### In Docker Containers (Production)
+1. During Docker build, version information is extracted from git tags using `git describe --tags`
+2. A Python file `app/_version_info.py` is generated containing the version details
+3. Git is removed from the final container image (security & size optimization)
+4. At runtime, `version.py` reads from the pre-generated `_version_info.py` file
+
+#### In Local Development
+1. No `_version_info.py` file exists (it's in .gitignore)
+2. `version.py` falls back to calling `git describe --tags` directly
+3. Requires git to be installed locally (typically already available)
+
+#### Fallback Behavior
+If neither the generated file exists nor git is available, version defaults to `0.0.0-unknown`.
+
+### Version Components
+
+The version information consists of three components:
+
+- **version**: Semantic version number (e.g., `1.0.0`)
+- **build**: Build type/prerelease identifier (e.g., `beta.5`, `release`, `beta.5.dirty`)
+- **commit**: Short git commit hash (e.g., `54b99d4`)
 
 ### Querying Version via Message Queue
 
@@ -212,6 +270,54 @@ docker pull marcosvitol/dunebugger-scheduler:develop
 docker exec <container-name> python -c "from version import get_version_string; print(get_version_string())"
 ```
 
+## Version Architecture Details
+
+### Multi-Stage Docker Build
+
+The Dockerfile uses a two-stage build process:
+
+**Stage 1: Builder**
+- Copies `.git` directory
+- Installs git temporarily
+- Runs `git describe --tags --always --dirty` to extract version
+- Parses version components (version, build type, commit)
+- Generates `app/_version_info.py` with hardcoded values
+- Removes git and cleans up
+
+**Stage 2: Runtime**
+- Based on minimal Python image
+- Copies generated `_version_info.py` from builder stage
+- Copies application code
+- **No git installed, no .git directory present**
+- Minimal attack surface and smaller image size
+
+### Version File Structure
+
+Generated `_version_info.py` contains:
+```python
+# Auto-generated version file - DO NOT EDIT
+# Generated at build time from git tags
+__version__ = "1.0.0"
+__build__ = "beta.5"
+__commit__ = "54b99d4"
+```
+
+### Version Resolution Logic
+
+The `version.py` module follows this priority:
+
+1. **Try to load from `_version_info.py`** (Docker containers)
+   - Fast, no external dependencies
+   - Generated at build time
+
+2. **Fall back to git** (Local development)
+   - Runs `git describe --tags --always --dirty`
+   - Parses output to extract components
+   - Requires git installed locally
+
+3. **Final fallback** (Neither available)
+   - Returns `0.0.0-unknown+unknown`
+
 ## Initial Setup
 
 ### Required GitHub Secrets
@@ -243,32 +349,63 @@ git commit -m "fix: correct typo in config"
 git commit -m "fixed typo"
 ```
 
-### Docker Build Failed
+### Version Shows 0.0.0-unknown Locally
 
-**Problem**: Docker workflow fails on version extraction.
-
-**Solution**: Ensure VERSION file exists or workflow will default to `0.1.0`.
-
-### Version Not Available in App
-
-**Problem**: `get_version` returns default values.
+**Problem**: Running locally shows default version instead of actual version.
 
 **Solution**: 
-1. Check environment variables are set in Docker run:
-   ```bash
-   docker run -e APP_VERSION=1.2.3 -e APP_BUILD=prod -e APP_COMMIT=abc1234 ...
-   ```
-2. Or rebuild image with proper build args (handled automatically by workflow)
+1. Ensure you have git installed
+2. Ensure you're in a git repository with tags
+3. Check that tags exist: `git tag -l`
+4. If no tags, semantic-release will create them on next push to main/develop
 
-## Manual Version Override
+### Version Shows Dirty Flag
 
-If needed, you can manually create a VERSION file:
+**Problem**: Version shows `1.0.0-beta.5.dirty` instead of `1.0.0-beta.5`.
 
+**Solution**: This is expected when you have uncommitted changes. Commit or stash changes:
 ```bash
-echo "1.2.3" > VERSION
-git add VERSION
-git commit -m "chore: set version to 1.2.3"
-git push
+git status  # See what's uncommitted
+git add .
+git commit -m "feat: my changes"
+```
+
+### Docker Build Fails on Version Extraction
+
+**Problem**: Docker build fails in the version extraction stage.
+
+**Solution**: 
+1. Ensure git history is available: GitHub Actions must use `fetch-depth: 0`
+2. Ensure at least one tag exists in the repository
+3. Check Dockerfile builder stage logs for errors
+
+## Manual Operations
+
+### Check Current Version Locally
+```bash
+# Using git
+git describe --tags --always
+
+# Using Python
+python3 -c "from app.version import get_version_string; print(get_version_string())"
+```
+
+### Create Manual Tag (if needed)
+```bash
+# Create annotated tag
+git tag -a v1.2.3 -m "Release version 1.2.3"
+
+# Push tag to trigger workflows
+git push origin v1.2.3
+```
+
+### Build Docker Image Locally with Version
+```bash
+# Build with automatic version extraction
+docker build -t dunebugger-scheduler:local .
+
+# Check version in built image
+docker run --rm dunebugger-scheduler:local python -c "from version import get_version_string; print(get_version_string())"
 ```
 
 ## References

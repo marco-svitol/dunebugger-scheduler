@@ -96,7 +96,7 @@ class MessagingQueueHandler:
     async def request_ntp_status(self):
         """Request the current NTP status from the controller."""
         await self.dispatch_message("get_ntp_status", "get_ntp_status", "remote")
-        logger.info("Requested NTP status from controller")
+        logger.debug("Requested NTP status from controller")
 
     async def handle_ntp_status(self, message_json):
         """Handle NTP status updates from the controller."""
@@ -104,7 +104,7 @@ class MessagingQueueHandler:
         ntp_available = body.get("ntp_available", False)
         timestamp = body.get("timestamp", "unknown")
         
-        logger.info(f"Received NTP status: available={ntp_available}, timestamp={timestamp}")
+        logger.debug(f"Received NTP status: available={ntp_available}, timestamp={timestamp}")
         
         # Update the NTP status in NTP status manager
         if self.ntp_status_manager:
@@ -116,5 +116,5 @@ class MessagingQueueHandler:
         """Handle get_version requests by returning version information."""
         version_info = get_version_info()
         await self.dispatch_message(version_info, "version_info", "remote")
-        logger.info(f"Sent version info: {version_info['full_version']}")
+        logger.debug(f"Sent version info: {version_info['full_version']}")
     
