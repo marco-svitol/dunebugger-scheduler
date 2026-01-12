@@ -3,7 +3,6 @@ import json
 import asyncio
 from dunebugger_logging import logger
 
-
 class NATSComm:
     def __init__(self, nat_servers, client_id, subject_root, mqueue_handler):
         self.nc = NATS()
