@@ -4,11 +4,20 @@ on:
   push:
     branches:
       - main
+      - develop
     tags:
       - 'v*'
   pull_request:
     branches:
       - main
+      - develop
+  workflow_run:
+    workflows: ["Semantic Release"]
+    types:
+      - completed
+    branches:
+      - main
+      - develop
 
 env:
   REGISTRY: docker.io
@@ -17,6 +26,8 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Only run if it's not a workflow_run or if the workflow_run was successful
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
       packages: write
@@ -24,6 +35,38 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get version information
+      id: version
+      run: |
+        # Check if VERSION file exists (created by semantic-release)
+        if [ -f VERSION ]; then
+          VERSION=$(cat VERSION)
+        else
+          VERSION="0.1.0"
+        fi
+        
+        # Get short commit SHA
+        COMMIT_SHA=$(git rev-parse --short HEAD)
+        
+        # Determine build type
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          BUILD_TYPE="prod"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          BUILD_TYPE="dev"
+        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          BUILD_TYPE="release"
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          BUILD_TYPE="branch"
+        fi
+        
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "commit=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+        echo "build_type=${BUILD_TYPE}" >> $GITHUB_OUTPUT
+        echo "Version: ${VERSION}, Commit: ${COMMIT_SHA}, Build Type: ${BUILD_TYPE}"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -36,18 +79,33 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_USERNAME }}
         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=semver,pattern={{major}}
-          type=raw,value=latest,enable={{is_default_branch}}
+    - name: Generate Docker tags
+      id: docker_tags
+      run: |
+        TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+        VERSION="${{ steps.version.outputs.version }}"
+        COMMIT="${{ steps.version.outputs.commit }}"
+        
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          # Main branch: latest and version tags
+          TAGS="${TAGS}:latest,${TAGS}:${VERSION},${TAGS}:${VERSION}-${COMMIT}"
+        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+          # Develop branch: develop tag and version-beta tags
+          TAGS="${TAGS}:develop,${TAGS}:${VERSION},${TAGS}:${VERSION}-${COMMIT}"
+        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          # Tag: version tags
+          TAGS="${TAGS}:${VERSION},${TAGS}:${VERSION}-${COMMIT}"
+        elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          # Pull request: pr tag
+          TAGS="${TAGS}:pr-${{ github.event.pull_request.number }}"
+        else
+          # Other branches: branch name tag
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/[^a-zA-Z0-9]/-/g')
+          TAGS="${TAGS}:${BRANCH_NAME}"
+        fi
+        
+        echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+        echo "Docker tags: ${TAGS}"
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -56,10 +114,18 @@ jobs:
         file: ./Dockerfile
         platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ steps.docker_tags.outputs.tags }}
+        build-args: |
+          APP_VERSION=${{ steps.version.outputs.version }}
+          APP_BUILD=${{ steps.version.outputs.build_type }}
+          APP_COMMIT=${{ steps.version.outputs.commit }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
     - name: Image digest
-      run: echo ${{ steps.build-push.outputs.digest }}
+      if: github.event_name != 'pull_request'
+      run: |
+        echo "Successfully built and pushed:"
+        echo "Tags: ${{ steps.docker_tags.outputs.tags }}"
+        echo "Version: ${{ steps.version.outputs.version }}"
+        echo "Commit: ${{ steps.version.outputs.commit }}"

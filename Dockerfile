@@ -3,11 +3,17 @@ FROM python:3.11-slim-bookworm
 
 ARG APP_UID=1000
 ARG APP_GID=1000
+ARG APP_VERSION=0.1.0
+ARG APP_BUILD=dev
+ARG APP_COMMIT=unknown
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    APP_VERSION=${APP_VERSION} \
+    APP_BUILD=${APP_BUILD} \
+    APP_COMMIT=${APP_COMMIT}
 
 # Set working directory
 WORKDIR /app
