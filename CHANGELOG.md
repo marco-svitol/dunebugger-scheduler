@@ -1,3 +1,11 @@
+## [1.0.0-beta.7](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-01-12)
+
+
+### Features
+
+* move to ghcr ([28db15d](https://github.com/marco-svitol/dunebugger-scheduler/commit/28db15dc47b5c029764effc2419a59b85f636fe0))
+* move to ghcr ([ec77278](https://github.com/marco-svitol/dunebugger-scheduler/commit/ec77278edcedf0a0da842290ed82fc8f8b2df55b))
+
 ## [1.0.0-beta.6](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-01-12)
 
 
