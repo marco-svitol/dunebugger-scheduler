@@ -9,6 +9,7 @@ The version follows semantic versioning (MAJOR.MINOR.PATCH).
 import subprocess
 import re
 from pathlib import Path
+from dunebugger_settings import settings
 
 
 def _load_from_generated_file():
@@ -141,11 +142,13 @@ else:
 def get_version_info():
     """Return a dictionary with complete version information."""
     return {
+        "component": settings.mQueueClientID,
         "version": __version__,
         "build": __build__,
         "commit": __commit__,
         "full_version": f"{__version__}-{__build__}+{__commit__[:7]}" if __commit__ != "unknown" else f"{__version__}-{__build__}"
     }
+
 
 
 def get_version_string():

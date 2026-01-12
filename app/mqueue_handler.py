@@ -46,7 +46,9 @@ class MessagingQueueHandler:
             elif subject in ["ntp_status"]:
                 await self.handle_ntp_status(message_json)
             elif subject in ["get_version"]:
-                await self.handle_get_version()
+                #TODO : make use of reply field more consistently in mqueue handling
+                recipient = mqueue_message.reply if mqueue_message.reply else message_json.get("source")
+                await self.handle_get_version(recipient)
             else:
                 logger.warning(f"Unknown subject: {subject}. Ignoring message.")
         except KeyError as key_error:
@@ -112,9 +114,9 @@ class MessagingQueueHandler:
         else:
             logger.error("NTP status manager not available to update NTP status")
 
-    async def handle_get_version(self):
+    async def handle_get_version(self, recipient):
         """Handle get_version requests by returning version information."""
         version_info = get_version_info()
-        await self.dispatch_message(version_info, "version_info", "remote")
+        await self.dispatch_message(version_info, "version_info", recipient)
         logger.debug(f"Sent version info: {version_info['full_version']}")
     
