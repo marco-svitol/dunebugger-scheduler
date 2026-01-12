@@ -115,7 +115,7 @@ class NATSComm:
         """Return current connection status"""
         return self.is_connected
 
-    async def send(self, message: dict, recipient, reply_subject=None):
+    async def send(self, message: dict, recipient, reply_to=None):
         if not self.is_connected:
             logger.warning("NATS not connected, cannot send message")
             return False
@@ -124,8 +124,8 @@ class NATSComm:
             # Convert dictionary to JSON string, then encode to bytes
             subject = message["subject"]
             message_json = json.dumps(message)
-            if reply_subject:
-                await self.nc.publish(f"{self.subject_root}.{recipient}.{subject}", message_json.encode(), reply_to=reply_subject)
+            if reply_to:
+                await self.nc.publish(f"{self.subject_root}.{recipient}.{subject}", message_json.encode(), reply_to=reply_to)
             else:
                 await self.nc.publish(f"{self.subject_root}.{recipient}.{subject}", message_json.encode())
             return True
