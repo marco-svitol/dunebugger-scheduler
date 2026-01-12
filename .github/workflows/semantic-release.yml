@@ -14,6 +14,9 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release_info.outputs.released }}
+      version: ${{ steps.release_info.outputs.version }}
     
     steps:
       - name: Checkout code
@@ -106,9 +109,32 @@ jobs:
         run: npx semantic-release
 
       - name: Output release info
+        id: release_info
         run: |
           if [ -f VERSION ]; then
-            echo "Released version: $(cat VERSION)"
+            VERSION=$(cat VERSION | tr -d '[:space:]')
+            echo "Released version: ${VERSION}"
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "released=true" >> $GITHUB_OUTPUT
           else
             echo "No release created"
+            echo "released=false" >> $GITHUB_OUTPUT
           fi
+
+  trigger-docker-build:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Trigger Docker Build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'docker-build-push.yml',
+              ref: context.ref
+            })
+            console.log('Docker build workflow triggered')
