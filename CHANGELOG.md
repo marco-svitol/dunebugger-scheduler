@@ -1,3 +1,10 @@
+## [1.0.0-beta.4](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-01-12)
+
+
+### Bug Fixes
+
+* trigger docker build from semantic release ([36a75f2](https://github.com/marco-svitol/dunebugger-scheduler/commit/36a75f25796569c3dc550d447198f7fecb9cfd39))
+
 ## [1.0.0-beta.3](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2026-01-12)
 
 
