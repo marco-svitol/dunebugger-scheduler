@@ -1,3 +1,10 @@
+## [1.0.0-beta.6](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-01-12)
+
+
+### Features
+
+* improve versioning and CI/CD workflows ([75069bf](https://github.com/marco-svitol/dunebugger-scheduler/commit/75069bfe386e17718f451dfa652b4b69d43fb561))
+
 ## [1.0.0-beta.5](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-01-12)
 
 
