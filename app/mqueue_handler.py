@@ -62,7 +62,7 @@ class MessagingQueueHandler:
         await self.handle_get_last_executed_action()
 
     async def handle_heartbeat(self):
-        await self.dispatch_message("alive", "heartbeat", "remote")
+        await self.dispatch_message(get_version_info(), "heartbeat", "remote")
 
     async def handle_modes_list(self, message_json):
         modes_list = message_json["body"]
