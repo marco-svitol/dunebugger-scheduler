@@ -1,3 +1,10 @@
+## [1.0.0-beta.9](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-01-13)
+
+
+### Features
+
+* build for arm v8 architecture ([814cde2](https://github.com/marco-svitol/dunebugger-scheduler/commit/814cde216ffe73f81c9adf6691799aae19e4b555))
+
 ## [1.0.0-beta.8](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-01-13)
 
 
