@@ -1,3 +1,11 @@
+## [1.0.0-beta.8](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2026-01-13)
+
+
+### Features
+
+* add component info to version and fix message dispatching ([6cf85e7](https://github.com/marco-svitol/dunebugger-scheduler/commit/6cf85e7753020a5cc1e4bc8b7a58e677e8d8d8e4))
+* show version at startup ([6489b40](https://github.com/marco-svitol/dunebugger-scheduler/commit/6489b409917f303441a86c2b05397581f1464cf2))
+
 ## [1.0.0-beta.7](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-01-12)
 
 
