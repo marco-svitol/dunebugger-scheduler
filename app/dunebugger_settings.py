@@ -48,11 +48,11 @@ class DunebuggerSettings:
                 if option in ["mQueueServers", "mQueueClientID", "mQueueSubjectRoot", "mQueueStateCheckIntervalSecs"]:
                     return str(value)
             elif section == "Log":
-                logLevel = get_logging_level_from_name(value)
-                if logLevel == "":
+                log_level = get_logging_level_from_name(value)
+                if log_level == "":
                     return get_logging_level_from_name("INFO")
                 else:
-                    return logLevel
+                    return log_level
 
         except (configparser.NoOptionError, ValueError) as e:
             raise ValueError(f"Invalid configuration: Section={section}, Option={option}, Value={value}. Error: {e}")

@@ -3,8 +3,8 @@ import logging.config
 from os import path
 import asyncio
 
-logConfig = path.join(path.dirname(path.abspath(__file__)), "config/dunebuggerlogging.conf")
-logging.config.fileConfig(logConfig)  # load logging config file
+log_config = path.join(path.dirname(path.abspath(__file__)), "config/dunebuggerlogging.conf")
+logging.config.fileConfig(log_config)  # load logging config file
 logger = logging.getLogger("dunebuggerLog")
 
 COLORS = {
