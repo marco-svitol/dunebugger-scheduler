@@ -55,14 +55,6 @@ class MessagingQueueHandler:
             logger.error(f"KeyError: {key_error}. Message: {message_json}")
         except Exception as e:
             logger.error(f"Error processing message: {e}. Message: {message_json}")
-
-    async def dispatch_message(self, message_body, subject, recipient, reply_subject=None):
-        message = {
-            "body": message_body,
-            "subject": subject,
-            "source": settings.mQueueClientID,
-        }
-        await self.mqueue_sender.send(message, recipient, reply_subject)
     
     async def handle_refresh(self):
         await self.handle_get_schedule()
@@ -70,7 +62,7 @@ class MessagingQueueHandler:
         await self.handle_get_last_executed_action()
 
     async def handle_heartbeat(self):
-        await self.dispatch_message("alive", "heartbeat", "remote")
+        await self.dispatch_message(get_version_info(), "heartbeat", "remote")
 
     async def handle_modes_list(self, message_json):
         modes_list = message_json["body"]
@@ -120,3 +112,10 @@ class MessagingQueueHandler:
         await self.dispatch_message(version_info, "version_info", recipient)
         logger.debug(f"Sent version info: {version_info['full_version']}")
     
+    async def dispatch_message(self, message_body, subject, recipient, reply_to=None):
+        message = {
+            "body": message_body,
+            "subject": subject,
+            "source": settings.mQueueClientID,
+        }
+        await self.mqueue_sender.send(message, recipient, reply_to)
