@@ -1,3 +1,15 @@
+## [1.0.0-beta.10](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2026-01-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* Simplify version management by generating VERSION file directly
+
+### Features
+
+* Simplify version management by generating VERSION file directly ([be1eef7](https://github.com/marco-svitol/dunebugger-scheduler/commit/be1eef78f884000e542ff3df269b136c1340239f))
+* update manifest for new release ([#13](https://github.com/marco-svitol/dunebugger-scheduler/issues/13)) ([6e7974f](https://github.com/marco-svitol/dunebugger-scheduler/commit/6e7974ff1e78d03d039a4cb82989471258a75bc8))
+
 ## [1.0.0-beta.9](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2026-01-13)
 
 

@@ -1,6 +1,6 @@
 {
   "component": "dunebugger-scheduler",
-  "version": "RELEASE_VERSION",
+  "version": "1.0.0-beta.10",
   "description": "Update manifest for dunebugger-scheduler container update",
   
   "pre_checks": [
@@ -82,7 +82,7 @@
     {
       "action": "exec",
       "command": "docker exec dunebugger-scheduler python -c \"from app.version import get_version_info; print(get_version_info()['full_version'])\"",
-      "expected_output": "RELEASE_VERSION",
+      "expected_output": "1.0.0-beta.10",
       "description": "Verify new container is running correct version",
       "timeout": 10,
       "retry": {
