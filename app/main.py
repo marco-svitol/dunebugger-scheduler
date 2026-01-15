@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 from version import get_version_info
-print(f"Dunebugger Scheduler version: {get_version_info()['full_version']}")
+print(f"Dunebugger core version: {get_version_info()['full_version']}, build type: {get_version_info()['build_type']}, build number: {get_version_info()['build_number']}")
 
 from class_factory import mqueue, mqueue_handler, schedule_interpreter, state_tracker
 from dunebugger_logging import logger

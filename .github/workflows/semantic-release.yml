@@ -113,6 +113,14 @@ jobs:
             echo "Released version: ${VERSION}"
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
             echo "released=true" >> $GITHUB_OUTPUT
+
+            # Add summary
+            echo "### Release Created :rocket:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Version:** ${VERSION}" >> $GITHUB_STEP_SUMMARY
+            echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Docker image will be built and pushed by the docker-build-push workflow" >> $GITHUB_STEP_SUMMARY
           else
             echo "No release created"
             echo "released=false" >> $GITHUB_OUTPUT
