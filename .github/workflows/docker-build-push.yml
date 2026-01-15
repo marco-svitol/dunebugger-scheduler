@@ -1,71 +1,79 @@
-name: Semantic Release
+name: Build and Push Docker Image
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 concurrency:
-  group: semantic-release-${{ github.ref }}
+  group: docker-build-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  release:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          node-version: '20'
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install semantic-release
+      - name: Generate Docker tags
+        id: docker_tags
         run: |
-          npm install -g \
-            semantic-release@23 \
-            @semantic-release/git@10 \
-            @semantic-release/github@10 \
-            @semantic-release/changelog@6 \
-            @semantic-release/exec@6 \
-            conventional-changelog-conventionalcommits@7
+          TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          VERSION="${GITHUB_REF_NAME#v}"
+          COMMIT=$(git rev-parse --short HEAD)
 
-      - name: Create .releaserc.json
+          if [[ "$GITHUB_REF_NAME" == *"-beta"* ]]; then
+            # Beta release (develop)
+            TAGS="${TAG}:develop,${TAG}:${VERSION},${TAG}:${VERSION}-${COMMIT}"
+          else
+            # Stable release (main)
+            TAGS="${TAG}:latest,${TAG}:${VERSION},${TAG}:${VERSION}-${COMMIT}"
+          fi
+
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "commit=${COMMIT}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm/v8
+          push: true
+          tags: ${{ steps.docker_tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build summary
         run: |
-          cat > .releaserc.json << 'EOF'
-          {
-            "branches": [
-              "main",
-              {
-                "name": "develop",
-                "prerelease": "beta"
-              }
-            ],
-            "plugins": [
-              ["@semantic-release/commit-analyzer", { "preset": "conventionalcommits" }],
-              ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
-              ["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
-              ["@semantic-release/exec", {
-                "prepareCmd": "sed -i 's/\"RELEASE_VERSION\"/\"${nextRelease.version}\"/g' update-manifest.json"
-              }],
-              ["@semantic-release/git", { "assets": ["CHANGELOG.md", "update-manifest.json"], "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}" }],
-              "@semantic-release/github"
-            ]
-          }
-          EOF
-
-      - name: Run semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+          echo "### Docker Build Complete :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.docker_tags.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ steps.docker_tags.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.docker_tags.outputs.tags }}" | tr ',' '\n' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
