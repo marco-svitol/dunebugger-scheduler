@@ -1,6 +1,6 @@
 {
   "component": "dunebugger-scheduler",
-  "version": "1.0.0-beta.10",
+  "version": "1.0.0-beta.13",
   "description": "Update manifest for dunebugger-scheduler container update",
   
   "pre_checks": [

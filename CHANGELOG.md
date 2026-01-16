@@ -1,3 +1,10 @@
+## [1.0.0-beta.13](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-01-16)
+
+
+### Bug Fixes
+
+* publish update-manifest.json with new version ([#15](https://github.com/marco-svitol/dunebugger-scheduler/issues/15)) ([4208d50](https://github.com/marco-svitol/dunebugger-scheduler/commit/4208d50649f8f78929814df1d92cbae4cef1d8c6))
+
 ## [1.0.0-beta.12](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-01-16)
 
 
