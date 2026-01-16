@@ -25,7 +25,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
+
+      - name: Debug - Show current ref
+        run: |
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "GITHUB_REF_NAME: $GITHUB_REF_NAME"
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current tag: $(git describe --tags --exact-match 2>/dev/null || echo 'Not on a tag')"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
