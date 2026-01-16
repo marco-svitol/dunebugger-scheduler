@@ -132,14 +132,27 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Trigger Docker Build
+      - name: Checkout to get latest tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
+          echo "Latest tag: ${LATEST_TAG}"
+
+      - name: Trigger Docker Build on Tag
         uses: actions/github-script@v7
         with:
           script: |
+            const tag = '${{ steps.get_tag.outputs.tag }}';
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'docker-build-push.yml',
-              ref: context.ref
+              ref: tag
             })
-            console.log('Docker build workflow triggered')
+            console.log(`Docker build workflow triggered for tag: ${tag}`)

@@ -41,15 +41,23 @@ jobs:
         id: docker_tags
         run: |
           TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-          VERSION="${GITHUB_REF_NAME#v}"
+          
+          # Get version from tag (remove 'v' prefix if present)
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            echo "Error: This workflow should only run on tags"
+            exit 1
+          fi
+          
           COMMIT=$(git rev-parse --short HEAD)
 
-          if [[ "$GITHUB_REF_NAME" == *"-beta"* ]]; then
+          if [[ "$VERSION" == *"-beta"* ]]; then
             # Beta release (develop)
-            TAGS="${TAG}:develop,${TAG}:${VERSION},${TAG}:${VERSION}-${COMMIT}"
+            TAGS="${TAG}:develop,${TAG}:${VERSION},${TAG}:develop-${COMMIT}"
           else
             # Stable release (main)
-            TAGS="${TAG}:latest,${TAG}:${VERSION},${TAG}:${VERSION}-${COMMIT}"
+            TAGS="${TAG}:latest,${TAG}:${VERSION}"
           fi
 
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
