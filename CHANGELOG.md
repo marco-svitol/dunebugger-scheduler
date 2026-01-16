@@ -1,3 +1,10 @@
+## [1.0.0-beta.12](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2026-01-16)
+
+
+### Bug Fixes
+
+* correct pipe usage in GitHub Actions workflows ([#14](https://github.com/marco-svitol/dunebugger-scheduler/issues/14)) ([ac07d80](https://github.com/marco-svitol/dunebugger-scheduler/commit/ac07d809afca137910efb84a11a4fe80579af6eb))
+
 ## [1.0.0-beta.11](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2026-01-15)
 
 
