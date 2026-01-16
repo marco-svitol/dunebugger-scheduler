@@ -1,3 +1,10 @@
+## [1.0.0-beta.14](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-01-16)
+
+
+### Bug Fixes
+
+* adjust git checkout in docker-build-push.yml to use current ref ([#16](https://github.com/marco-svitol/dunebugger-scheduler/issues/16)) ([a2e50e8](https://github.com/marco-svitol/dunebugger-scheduler/commit/a2e50e80f80c2b1f9723bb0b871868c3bc5fb5d9))
+
 ## [1.0.0-beta.13](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2026-01-16)
 
 
