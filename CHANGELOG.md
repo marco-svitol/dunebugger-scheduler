@@ -1,3 +1,10 @@
+## [1.0.0-beta.15](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-01-17)
+
+
+### Features
+
+* update CI pipeline for semantic release ([#17](https://github.com/marco-svitol/dunebugger-scheduler/issues/17)) ([86149f5](https://github.com/marco-svitol/dunebugger-scheduler/commit/86149f5f182d5e1c3d1e71d42e9b9f673f4ec084))
+
 ## [1.0.0-beta.14](https://github.com/marco-svitol/dunebugger-scheduler/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-01-16)
 
 
